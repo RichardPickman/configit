@@ -1,10 +1,10 @@
 {
     "reggae-media-stack": {
-        "bucket": "reggae-media-stack-reggaemediastorage909178cb-f8n9sp2jd6gy",
-        "settings": "reggae-media-stack-reggaemediasettings65EE83D3-19VKLY270KD8I",
-        "userPoolClientId": "3s0vtjec82ock37e8sang486r6",
-        "userPoolClientSecret": "7c1hui1soagfrkk0kg6dic4bn8shk0appk5445v6eqvbqko8d0",
-        "articles": "reggae-media-stack-reggaemediaarticles6A634E18-1DZ4TBGOYD0SP",
-        "userPoolId": "eu-west-2_Mwvf2vutj"
+        "bucket": "98wceyh92843hf9o823hf9d723hr4",
+        "settings": "98wceyh92843hf9o823hf9d723hr4",
+        "userPoolClientId": "2_930o8ghjv9034587ht0g39e7ugv903774ht0o2",
+        "userPoolClientSecret": "2_930o8ghjv9034587ht0g39e7ugv903774ht0o2",
+        "articles": "98wceyh92843hf9o823hf9d723hr4",
+        "userPoolId": "eu-west-2_930o8ghjv9034587ht0g39e7ugv903774ht0o2"
     }
 }
