@@ -50,23 +50,18 @@ async function init() {
     createEnvironmentFile(variables);
 
     function log(log: string, type: LogsTypes = "log") {
-        const success = (text: string) => stdout.write(chalk.green(text));
-        const warning = (text: string) => stdout.write(chalk.yellow(text));
-        const error = (text: string) => stderr.write(chalk.red(text));
-        const logger = (text: string) => stdout.write(chalk.cyan(text));
-
         switch (type) {
             case "success":
-                success(`${log}\n`);
+                stdout.write(chalk.green(`${log}\n`));
                 break;
             case "warning":
-                warning(`${log}\n`);
+                stdout.write(chalk.yellow(`${log}\n`));
                 break;
             case "error":
-                error(`${log}\n`);
+                stderr.write(chalk.red(`${log}\n`));
                 break;
             case "log":
-                logger(`${log}\n`);
+                stdout.write(chalk.cyan(`${log}\n`));
                 break;
         }
     }
