@@ -7,23 +7,47 @@ import {
     executeCommandWithLogsReader,
 } from "./utils/executors";
 import { getOutputFileName, isOutputExist } from "./utils/outputs";
+import { getVariablesFromStringOutput } from "./utils/helpers";
 
 const CALL_DIRECTORY = process.cwd();
-const choices = [
-    { name: "yarn", value: "yarn " },
-    { name: "npm", value: "npm run " },
-    { name: "pnpm", value: "pnpm " },
-];
 
 type LogsTypes = "success" | "error" | "warning" | "log";
 
+const prompts = {
+    command: { message: "What is the command?" },
+    manager: {
+        message: "Package manager:",
+        choices: [
+            { name: "yarn", value: "yarn " },
+            { name: "npm", value: "npm run " },
+            { name: "pnpm", value: "pnpm " },
+        ],
+    },
+    environment: {
+        message: "What environment for?",
+        choices: [
+            { name: "development", value: "development" },
+            { name: "production", value: "production" },
+        ],
+    },
+};
+
 const { stderr, stdout } = process;
 
-async function init() {
-    const prompts = await getPrompts();
-    const generatedValues = await callCDK(prompts.command, prompts.manager);
+function getVariablesFromFile(path: string) {
+    const file = readFileSync(path, "utf-8");
+    const result = getVariablesFromStringOutput(file);
 
-    createEnvironmentFile(generatedValues);
+    return result;
+}
+
+async function init() {
+    const variables: string[] = [];
+    const answers = await getPrompts();
+
+    await callCDK(answers.command, answers.manager);
+
+    createEnvironmentFile(variables);
 
     function log(log: string, type: LogsTypes = "log") {
         const success = (text: string) => stdout.write(chalk.green(text));
@@ -47,9 +71,53 @@ async function init() {
         }
     }
 
+    function populateWithGlobalVariables() {
+        try {
+            const homeDirectory = process.env.HOME;
+
+            if (!homeDirectory) {
+                log(
+                    "There is no credentials file, terminating process",
+                    "error"
+                );
+
+                process.exit(1);
+            }
+
+            const credentialsArray = getVariablesFromFile(
+                path.join(homeDirectory, ".aws/credentials")
+            );
+            const configArray = getVariablesFromFile(
+                path.join(homeDirectory, ".aws/config")
+            );
+
+            const vars = [...credentialsArray, ...configArray];
+
+            vars.forEach((item) => {
+                const [key, value] = item.split(" = ");
+
+                variables.push([key.toUpperCase(), value].join("="));
+            });
+        } catch (e) {
+            console.log(e);
+            log(
+                "Error while getting either credentials of config. Proceeding without global variables.",
+                "error"
+            );
+            return;
+        }
+    }
+
     async function getPrompts() {
-        const command = await input({ message: "What is the command?" });
-        const manager = await select({ message: "Package manager:", choices });
+        const command = await input(prompts.command);
+        const manager = await select(prompts.manager);
+        const environment = (await select(prompts.environment)) as
+            | "production"
+            | "development";
+
+        if (environment === "production") {
+            populateWithGlobalVariables();
+        }
 
         log(
             "All the necessary prompts recieved! Proceeding with cdk deploy command"
@@ -58,6 +126,7 @@ async function init() {
         return {
             command,
             manager,
+            environment,
         };
     }
 
@@ -101,7 +170,9 @@ async function init() {
                     fileName
                 );
 
-                return result;
+                result.forEach((item) => variables.push(item));
+
+                break;
             }
             case false: {
                 log("Output file is not defined. Proceeding with logs reader");
@@ -109,24 +180,29 @@ async function init() {
                     composedCommand
                 );
 
-                return result;
+                result.forEach((item) => variables.push(item));
+
+                break;
             }
         }
     }
 
     function createEnvironmentFile(store: string[]) {
         const parsedStore = store.join("\n");
-        const envFile = path.join(CALL_DIRECTORY, ".env");
+        const env = {
+            production: ".env.production",
+            development: ".env.local",
+        };
+        const envFile = path.join(CALL_DIRECTORY, env[answers.environment]);
 
         log("Got all key-value pairs, creating .env file", "success");
 
         writeFileSync(envFile, parsedStore);
 
-        log(".env file created", "success");
         log("I am finished here, terminating process...", "success");
     }
 
-    process.exit(1);
+    process.exit(0);
 }
 
 init();
