@@ -34,6 +34,23 @@ const prompts = {
 
 const { stderr, stdout } = process;
 
+function log(log: string, type: LogsTypes = "log") {
+    switch (type) {
+        case "success":
+            stdout.write(chalk.green(`${log}\n`));
+            break;
+        case "warning":
+            stdout.write(chalk.yellow(`${log}\n`));
+            break;
+        case "error":
+            stderr.write(chalk.red(`${log}\n`));
+            break;
+        case "log":
+            stdout.write(chalk.cyan(`${log}\n`));
+            break;
+    }
+}
+
 function getVariablesFromFile(path: string) {
     const file = readFileSync(path, "utf-8");
     const result = getVariablesFromStringOutput(file);
@@ -49,44 +66,27 @@ async function init() {
 
     createEnvironmentFile(variables);
 
-    function log(log: string, type: LogsTypes = "log") {
-        switch (type) {
-            case "success":
-                stdout.write(chalk.green(`${log}\n`));
-                break;
-            case "warning":
-                stdout.write(chalk.yellow(`${log}\n`));
-                break;
-            case "error":
-                stderr.write(chalk.red(`${log}\n`));
-                break;
-            case "log":
-                stdout.write(chalk.cyan(`${log}\n`));
-                break;
-        }
-    }
-
     function populateWithGlobalVariables() {
         try {
             const homeDirectory = process.env.HOME;
 
             if (!homeDirectory) {
                 log(
-                    "There is no credentials file, terminating process",
+                    "There is no credentials file, proceeding without account credentials",
                     "error"
                 );
 
-                process.exit(1);
+                return;
             }
 
-            const credentialsArray = getVariablesFromFile(
+            const credentials = getVariablesFromFile(
                 path.join(homeDirectory, ".aws/credentials")
             );
-            const configArray = getVariablesFromFile(
+            const config = getVariablesFromFile(
                 path.join(homeDirectory, ".aws/config")
             );
 
-            const vars = [...credentialsArray, ...configArray];
+            const vars = [...credentials, ...config];
 
             vars.forEach((item) => {
                 const [key, value] = item.split(" = ");
@@ -182,8 +182,8 @@ async function init() {
         }
     }
 
-    function createEnvironmentFile(store: string[]) {
-        const parsedStore = store.join("\n");
+    function createEnvironmentFile(vars: string[]) {
+        const store = vars.join("\n");
         const env = {
             production: ".env.production",
             development: ".env.local",
@@ -192,12 +192,12 @@ async function init() {
 
         log("Got all key-value pairs, creating .env file", "success");
 
-        writeFileSync(envFile, parsedStore);
+        writeFileSync(envFile, store);
 
         log("I am finished here, terminating process...", "success");
-    }
 
-    process.exit(0);
+        process.exit(0);
+    }
 }
 
 init();
